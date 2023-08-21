@@ -26,13 +26,11 @@ import cats.laws.discipline.MiniInt
 import cats.laws.discipline.arbitrary._
 import cats.laws.discipline.eq._
 
-import org.specs2.mutable._
-import org.typelevel.discipline.specs2.mutable.Discipline
+import munit.DisciplineSuite
 
-class KleisliFreeSyncSpec
-    extends Specification
-    with Discipline
-    with BaseSpec
+class KleisliFreeSyncSuite
+    extends DisciplineSuite
+    with BaseSuite
     with LowPriorityImplicits {
   import FreeSyncGenerators._
   import SyncTypeGenerators._
