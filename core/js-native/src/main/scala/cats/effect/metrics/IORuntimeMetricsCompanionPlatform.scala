@@ -16,15 +16,15 @@
 
 package cats.effect.metrics
 
-private final class CpuStarvation(sampler: CpuStarvationSampler) extends CpuStarvationMBean {
-  def getCpuStarvationCount(): Long =
-    sampler.cpuStarvationCount()
+private[metrics] abstract class IORuntimeMetricsCompanionPlatform {
+  this: IORuntimeMetrics.type =>
 
-  def getMaxClockDriftMs(): Long =
-    sampler.clockDriftMaxMs()
+  private[effect] def apply(): IORuntimeMetrics =
+    new IORuntimeMetrics {
+      private[effect] val cpuStarvationSampler: CpuStarvationSampler =
+        CpuStarvationSampler()
 
-  def getCurrentClockDriftMs(): Long =
-    sampler.clockDriftCurrentMs()
+      val cpuStarvation: CpuStarvationMetrics =
+        CpuStarvationMetrics(cpuStarvationSampler)
+    }
 }
-
-private object CpuStarvation
