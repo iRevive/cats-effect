@@ -671,7 +671,12 @@ lazy val core = crossProject(JSPlatform, JVMPlatform, NativePlatform)
       ProblemFilters.exclude[DirectMissingMethodProblem]("cats.effect.IOLocal.lens"),
       // internal API change, makes CpuStarvationMetrics available on all platforms
       ProblemFilters.exclude[MissingClassProblem](
-        "cats.effect.metrics.JvmCpuStarvationMetrics$NoOpCpuStarvationMetrics")
+        "cats.effect.metrics.JvmCpuStarvationMetrics$NoOpCpuStarvationMetrics"),
+      ProblemFilters.exclude[MissingClassProblem]("cats.effect.metrics.CpuStarvationMetrics"),
+      // package-private classes moved to the `cats.effect.unsafe.metrics` package
+      ProblemFilters.exclude[MissingClassProblem]("cats.effect.metrics.CpuStarvation"),
+      ProblemFilters.exclude[MissingClassProblem]("cats.effect.metrics.CpuStarvation$"),
+      ProblemFilters.exclude[MissingClassProblem]("cats.effect.metrics.CpuStarvationMBean")
     ) ++ {
       if (tlIsScala3.value) {
         // Scala 3 specific exclusions
