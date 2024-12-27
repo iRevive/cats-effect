@@ -16,20 +16,20 @@
 
 package cats.effect
 
-trait SyncIOPlatformSpecification { self: BaseSpec =>
-  def platformSpecs = {
-    "platform" should {
-      "realTimeInstant should return an Instant constructed from realTime" in {
-        // Unfortunately since SyncIO doesn't use on a controllable
-        // clock source, so a diff best we can do
-        val op = for {
-          realTime <- SyncIO.realTime
-          now <- SyncIO.realTimeInstant
-        } yield (now.toEpochMilli - realTime.toMillis) <= 10000
+trait SyncIOPlatformSuite { self: BaseSuite =>
+  def platformTests() = {
 
-        op must completeAsSync(true)
-      }
+    test("realTimeInstant should return an Instant constructed from realTime") {
+      // Unfortunately since SyncIO doesn't use on a controllable
+      // clock source, so a diff best we can do
+      val op = for {
+        realTime <- SyncIO.realTime
+        now <- SyncIO.realTimeInstant
+      } yield (now.toEpochMilli - realTime.toMillis) <= 10000
+
+      assertCompleteAsSync(op, true)
     }
+
   }
 
 }

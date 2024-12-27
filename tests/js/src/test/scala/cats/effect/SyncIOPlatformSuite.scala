@@ -16,19 +16,20 @@
 
 package cats.effect
 
-import org.specs2.ScalaCheck
+trait SyncIOPlatformSuite { self: BaseSuite =>
+  def platformTests() = {
 
-trait IOPlatformSpecification { self: BaseSpec with ScalaCheck =>
+    test("realTimeDate should return an Instant constructed from realTime") {
+      // Unfortunately since SyncIO doesn't rely on a controllable
+      // time source, this is the best I can do
+      val op = for {
+        realTime <- SyncIO.realTime
+        jsDate <- SyncIO.realTimeDate
+      } yield (jsDate.getTime().toLong - realTime.toMillis) <= 30
 
-  def platformSpecs = "platform" should {
-    "realTimeInstant should return an Instant constructed from realTime" in ticked {
-      implicit ticker =>
-        val op = for {
-          now <- IO.realTimeInstant
-          realTime <- IO.realTime
-        } yield now.toEpochMilli == realTime.toMillis
-
-        op must completeAs(true)
+      assertCompleteAsSync(op, true)
     }
+
   }
+
 }

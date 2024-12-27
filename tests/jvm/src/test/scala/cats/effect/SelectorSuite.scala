@@ -24,7 +24,7 @@ import java.nio.ByteBuffer
 import java.nio.channels.Pipe
 import java.nio.channels.SelectionKey._
 
-class SelectorSuite extends BaseSpec {
+class SelectorSuite extends BaseSuite {
 
   def getSelector: IO[Selector] =
     IO.pollers.map(_.collectFirst { case selector: Selector => selector }).map(_.get)
@@ -44,76 +44,73 @@ class SelectorSuite extends BaseSpec {
         }
       }
 
-  "Selector" should {
-
-    "notify read-ready events" in real {
-      mkPipe.use { pipe =>
-        for {
-          selector <- getSelector
-          buf <- IO(ByteBuffer.allocate(4))
-          _ <- IO(pipe.sink.write(ByteBuffer.wrap(Array(1, 2, 3)))).background.surround {
-            selector.select(pipe.source, OP_READ) *> IO(pipe.source.read(buf))
-          }
-          _ <- IO(pipe.sink.write(ByteBuffer.wrap(Array(42)))).background.surround {
-            selector.select(pipe.source, OP_READ) *> IO(pipe.source.read(buf))
-          }
-        } yield buf.array().toList must be_==(List[Byte](1, 2, 3, 42))
-      }
+  real("notify read-ready events") {
+    mkPipe.use { pipe =>
+      for {
+        selector <- getSelector
+        buf <- IO(ByteBuffer.allocate(4))
+        _ <- IO(pipe.sink.write(ByteBuffer.wrap(Array(1, 2, 3)))).background.surround {
+          selector.select(pipe.source, OP_READ) *> IO(pipe.source.read(buf))
+        }
+        _ <- IO(pipe.sink.write(ByteBuffer.wrap(Array(42)))).background.surround {
+          selector.select(pipe.source, OP_READ) *> IO(pipe.source.read(buf))
+        }
+      } yield assertEquals(buf.array().toList, List[Byte](1, 2, 3, 42))
     }
+  }
 
-    "setup multiple callbacks" in real {
-      mkPipe.use { pipe =>
-        for {
-          selector <- getSelector
-          _ <- selector.select(pipe.source, OP_READ).parReplicateA_(10) <&
-            IO(pipe.sink.write(ByteBuffer.wrap(Array(1, 2, 3))))
-        } yield ok
-      }
+  real("setup multiple callbacks") {
+    mkPipe.use { pipe =>
+      for {
+        selector <- getSelector
+        _ <- selector.select(pipe.source, OP_READ).parReplicateA_(10) <&
+          IO(pipe.sink.write(ByteBuffer.wrap(Array(1, 2, 3))))
+      } yield ()
     }
+  }
 
-    "works after blocking" in real {
-      mkPipe.use { pipe =>
-        for {
-          selector <- getSelector
-          _ <- IO.blocking(())
-          _ <- selector.select(pipe.sink, OP_WRITE)
-        } yield ok
-      }
+  real("works after blocking") {
+    mkPipe.use { pipe =>
+      for {
+        selector <- getSelector
+        _ <- IO.blocking(())
+        _ <- selector.select(pipe.sink, OP_WRITE)
+      } yield ()
     }
+  }
 
-    "gracefully handles illegal ops" in real {
-      mkPipe.use { pipe =>
-        // get off the wstp to test async codepaths
-        IO.blocking(()) *> getSelector.flatMap { selector =>
-          selector.select(pipe.sink, OP_READ).attempt.map {
-            case Left(_: IllegalArgumentException) => true
-            case _ => false
-          }
+  real("gracefully handles illegal ops") {
+    mkPipe.use { pipe =>
+      // get off the wstp to test async codepaths
+      IO.blocking(()) *> getSelector.flatMap { selector =>
+        selector.select(pipe.sink, OP_READ).attempt.map {
+          case Left(_: IllegalArgumentException) => true
+          case _ => false
         }
       }
     }
+  }
 
-    "handles concurrent close" in {
-      val (pool, poller, shutdown) = IORuntime.createWorkStealingComputeThreadPool(threads = 1)
-      implicit val runtime: IORuntime =
-        IORuntime.builder().setCompute(pool, shutdown).addPoller(poller, () => ()).build()
+  test("handles concurrent close") {
+    val (pool, poller, shutdown) = IORuntime.createWorkStealingComputeThreadPool(threads = 1)
+    implicit val runtime: IORuntime =
+      IORuntime.builder().setCompute(pool, shutdown).addPoller(poller, () => ()).build()
 
-      try {
-        val test = getSelector
-          .flatMap { selector =>
-            mkPipe.allocated.flatMap {
-              case (pipe, close) =>
-                selector.select(pipe.source, OP_READ).background.surround {
-                  IO.sleep(1.millis) *> close *> IO.sleep(1.millis)
-                }
-            }
+    try {
+      val test = getSelector
+        .flatMap { selector =>
+          mkPipe.allocated.flatMap {
+            case (pipe, close) =>
+              selector.select(pipe.source, OP_READ).background.surround {
+                IO.sleep(1.millis) *> close *> IO.sleep(1.millis)
+              }
           }
-          .replicateA_(1000)
-          .as(true)
-        test.unsafeRunSync() must beTrue
-      } finally {
-        runtime.shutdown()
-      }
+        }
+        .replicateA_(1000)
+        .as(true)
+      assert(test.unsafeRunSync())
+    } finally {
+      runtime.shutdown()
     }
   }
 
