@@ -358,6 +358,11 @@ class IOAppSpec extends FunSuite {
         assertEquals(h.awaitStatus(), 0)
       }
 
+      test("use configurable reportFailure for runnables on MainThread") {
+        val h = platform("MainThreadReportFailureRunnable", List.empty)
+        assertEquals(h.awaitStatus(), 0)
+      }
+
       test("warn on blocked threads") {
         val h = platform("BlockedThreads", List.empty)
         h.awaitStatus()
