@@ -71,6 +71,19 @@ package examples {
 
   }
 
+  object MainThreadReportFailureRunnable extends IOApp {
+
+    val exitCode = new AtomicReference[ExitCode](ExitCode.Error)
+
+    override def reportFailure(err: Throwable): IO[Unit] =
+      IO(exitCode.set(ExitCode.Success))
+
+    def run(args: List[String]): IO[ExitCode] =
+      IO(MainThread.execute(() => throw new Exception)) *>
+        IO.sleep(1.second) *> IO(exitCode.get)
+
+  }
+
   object BlockedThreads extends IOApp.Simple {
 
     override protected def blockedThreadDetectionEnabled = true
