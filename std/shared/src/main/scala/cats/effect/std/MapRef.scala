@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2024 Typelevel
+ * Copyright 2020-2025 Typelevel
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,8 +45,9 @@ trait MapRef[F[_], K, V] extends Function1[K, Ref[F, V]] {
 object MapRef extends MapRefCompanionPlatform {
 
   /**
-   * Default constructor for [[MapRef]]. If [[Sync]] is available, it will delegate to
-   * [[ofConcurrentHashMap]], otherwise it will fallback to [[ofShardedImmutableMap]].
+   * Default constructor for [[MapRef]]. If [[cats.effect.kernel.Sync]] is available, it will
+   * delegate to [[ofConcurrentHashMap]], otherwise it will fallback to
+   * [[ofShardedImmutableMap]].
    */
   def apply[F[_]: Concurrent, K, V]: F[MapRef[F, K, Option[V]]] = {
     Concurrent[F] match {
@@ -387,8 +388,8 @@ object MapRef extends MapRefCompanionPlatform {
         }
 
       def tryModify[B](
-          f: Option[V] => (Option[V], B))
-          : F[Option[B]] = // we need the suspend because we do effects inside
+          f: Option[V] => (Option[V], B)
+      ): F[Option[B]] = // we need the suspend because we do effects inside
         sync.delay {
           val init = map.get(k)
           init match {
